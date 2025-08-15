@@ -1,0 +1,123 @@
+// datasource and generator
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum Role {
+  ADMIN
+  MANAGER
+  EMPLOYEE
+}
+
+// Models
+model User {
+  id               String             @id @default(cuid())
+  email            String             @unique
+  passwordHash     String
+  name             String
+  role             Role               @default(EMPLOYEE)
+  mfaEnabled       Boolean            @default(false)
+  mfaSecret        String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  profile          EmployeeProfile?
+  attendance       Attendance[]
+  leaves           Leave[]
+  tasks            Task[]             @relation("TaskAssignee")
+  managedEmployees EmployeeProfile[]  @relation("ManagerEmployees")
+  payrolls         Payroll[]
+  performanceGoals PerformanceGoal[]
+  documents        Document[]
+  notifications    Notification[]
+}
+
+model EmployeeProfile {
+  id         String  @id @default(cuid())
+  user       User    @relation(fields: [userId], references: [id])
+  userId     String  @unique
+  position   String?
+  department String?
+  manager    User?   @relation("ManagerEmployees", fields: [managerId], references: [id])
+  managerId  String?
+}
+
+model Attendance {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  clockIn   DateTime
+  clockOut  DateTime?
+  latitude  Float?
+  longitude Float?
+  createdAt DateTime @default(now())
+}
+
+model Leave {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  type      String
+  status    String   @default("PENDING")
+  startDate DateTime
+  endDate   DateTime
+  reason    String?
+  createdAt DateTime @default(now())
+}
+
+model Payroll {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  period    String
+  grossPay  Float
+  tax       Float
+  netPay    Float
+  createdAt DateTime @default(now())
+}
+
+model PerformanceGoal {
+  id          String   @id @default(cuid())
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+  title       String
+  description String?
+  progress    Int      @default(0)
+  dueDate     DateTime?
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  status      String   @default("OPEN")
+  priority    String   @default("MEDIUM")
+  assignee    User?    @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  assigneeId  String?
+  createdAt   DateTime @default(now())
+}
+
+model Document {
+  id          String   @id @default(cuid())
+  owner       User     @relation(fields: [ownerId], references: [id])
+  ownerId     String
+  name        String
+  url         String
+  version     Int      @default(1)
+  createdAt   DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
